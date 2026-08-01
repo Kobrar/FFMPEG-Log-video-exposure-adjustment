@@ -14,7 +14,7 @@ V-Log. YMMV.
 
 ## Usage
 
-Open `src/index.html` in a browser, select the log profile, set the EV
+Open [`src/index.html`](https://html-preview.github.io/?url=https://github.com/Kobrar/FFMPEG-Log-video-exposure-adjustment/blob/main/src/index.html) in a browser, select the log profile, set the EV
 correction and the number of LUT curve points, enter input/output
 file names and any extra filters/options. The tool generates a copy-pasteable
 `ffmpeg` command, e.g.:

@@ -1,52 +1,61 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FFmpeg Log Exposure Tool</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#111;color:#ddd;font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.container{max-width:720px;width:100%;background:#1a1a1a;border-radius:12px;padding:32px;border:1px solid #333}
-h1{font-size:22px;margin-bottom:24px;color:#fff}
-.form-group{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:20px}
-.form-group label{flex-basis:100%;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#999;margin-bottom:6px}
-select,input[type=number],input[type=text]{width:100%;padding:10px 12px;background:#222;border:1px solid #444;border-radius:8px;color:#ddd;font-size:15px}
+body{background:#111;color:#ddd;font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:12px}
+.container{max-width:720px;width:100%;background:#1a1a1a;border-radius:12px;padding:20px 24px;border:1px solid #333}
+h1{font-size:20px;color:#fff}
+.title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.lang-btn{font-size:14px;padding:6px 8px;background:#222;border:1px solid #444;border-radius:8px;color:#ddd;cursor:pointer;max-width:180px}
+.lang-btn:hover{background:#333;border-color:#6af}
+.form-group{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px}
+.form-group label{flex-basis:100%;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#999;margin-bottom:2px}
+select,input[type=number],input[type=text]{width:100%;padding:7px 10px;background:#222;border:1px solid #444;border-radius:8px;color:#ddd;font-size:15px}
 select:focus,input[type=number]:focus,input[type=text]:focus{outline:none;border-color:#6af}
 input[type=number]{-moz-appearance:textfield}
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 .ev-wrap{display:flex;gap:8px;align-items:center;flex:1;min-width:0}
 .ev-wrap input{flex:1}
-.ev-wrap button{width:40px;height:40px;border-radius:8px;border:1px solid #444;background:#222;color:#ddd;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ev-wrap button{width:32px;height:32px;border-radius:8px;border:1px solid #444;background:#222;color:#ddd;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .ev-wrap button:hover{background:#333;border-color:#6af}
 .field{flex:1;min-width:0}
 .field-error{display:none;color:#ff6b6b;font-size:12px;flex:0 1 auto;max-width:40%}
 .field-error.show{display:inline-block}
-.btn-primary{width:100%;padding:12px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn-primary{width:100%;padding:9px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px}
 .btn-primary:hover{background:#1d4ed8}
-.result{margin-top:24px;display:none}
-.result-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.result{margin-top:12px;display:none}
+.result-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .result-label span{font-size:13px;color:#999}
 .copy-btn{font-size:12px;padding:4px 12px;background:#333;border:1px solid #555;border-radius:6px;color:#ddd;cursor:pointer}
 .copy-btn:hover{background:#444}
-textarea{width:100%;height:200px;padding:12px;background:#0d0d0d;border:1px solid #333;border-radius:8px;color:#6f6;font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;line-height:1.5;resize:vertical;tab-size:2}
+textarea{width:100%;height:160px;padding:8px 10px;background:#0d0d0d;border:1px solid #333;border-radius:8px;color:#6f6;font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;line-height:1.5;resize:vertical;tab-size:2}
 textarea:focus{outline:none;border-color:#6af}
-.info{font-size:12px;color:#666;margin-top:8px}
+.info{font-size:12px;color:#666;margin-top:4px}
 .info code{background:#222;padding:1px 5px;border-radius:4px;color:#888}
 </style>
 </head>
 <body>
 
 <div class="container">
-<h1>FFmpeg Log Exposure Correction</h1>
+<div class="title-row">
+<h1 data-i18n="title">FFmpeg Log Exposure Correction</h1>
+<select id="langBtn" class="lang-btn" title="Language">
+<option value="en">🇬🇧 English</option>
+<option value="pl">🇵🇱 Polski</option>
+</select>
+</div>
 
 <div class="form-group">
-<label for="profile">Profil logarytmiczny</label>
+<label for="profile" data-i18n="profile">Log profile</label>
 <select id="profile"></select>
 </div>
 
 <div class="form-group">
-<label for="ev">Korekcja ekspozycji (EV)</label>
+<label for="ev" data-i18n="ev">Exposure correction (EV)</label>
 <div class="ev-wrap">
 <button id="evDec" title="-0.5 EV">−</button>
 <input type="number" id="ev" value="0.0" step="0.166666666666666666666" min="-10" max="10">
@@ -56,7 +65,7 @@ textarea:focus{outline:none;border-color:#6af}
 </div>
 
 <div class="form-group">
-<label for="pointsN">Liczba punktów</label>
+<label for="pointsN" data-i18n="points">Number of points</label>
 <div class="field">
 <input type="number" id="pointsN" value="30" min="2" max="150" step="1">
 </div>
@@ -64,7 +73,7 @@ textarea:focus{outline:none;border-color:#6af}
 </div>
 
 <div class="form-group">
-<label for="inputFile">Nazwa pliku wejściowego</label>
+<label for="inputFile" data-i18n="inputFile">Input file name</label>
 <div class="field">
 <input type="text" id="inputFile" value="input.mp4">
 </div>
@@ -72,39 +81,39 @@ textarea:focus{outline:none;border-color:#6af}
 </div>
 
 <div class="form-group">
-<label for="outputFile">Nazwa pliku wyjściowego (opcjonalnie)</label>
+<label for="outputFile" data-i18n="outputFile">Output file name (optional)</label>
 <div class="field">
-<input type="text" id="outputFile" placeholder="puste = automatycznie">
+<input type="text" id="outputFile" data-i18n-placeholder="outputFilePlaceholder" placeholder="empty = automatic">
 </div>
 </div>
 
 <div class="form-group">
-<label for="extraFilters">Dodatkowe filtry video (po curves)</label>
+<label for="extraFilters" data-i18n="extraFilters">Extra video filters (after curves)</label>
 <div class="field">
-<input type="text" id="extraFilters" placeholder="np. eq=brightness=0.05,hue=h=10">
+<input type="text" id="extraFilters" data-i18n-placeholder="extraFiltersPlaceholder" placeholder="e.g. eq=brightness=0.05,hue=h=10">
 </div>
 </div>
 
 <div class="form-group">
-<label for="extraOpts">Opcje ffmpeg (wyjściowe)</label>
+<label for="extraOpts" data-i18n="extraOpts">ffmpeg options (output)</label>
 <div class="field">
 <input type="text" id="extraOpts" value="-c:v libx264 -crf 18 -preset slow -c:a copy">
 </div>
 </div>
 
 <div class="form-group">
-<label for="hiPrecision"><input type="checkbox" id="hiPrecision" checked> Curves w 4:4:4 10-bit (mniejsza zmiana koloru)</label>
+<label for="hiPrecision"><input type="checkbox" id="hiPrecision" checked> <span data-i18n="hiPrecision">Curves in 4:4:4 10-bit (less color shift)</span></label>
 </div>
 
-<button class="btn-primary" id="generate">Generuj</button>
+<button class="btn-primary" id="generate" data-i18n="generate">Generate</button>
 
 <div class="result" id="result">
 <div class="result-label">
-<span>Polecenie ffmpeg:</span>
-<button class="copy-btn" id="copyBtn">Kopiuj</button>
+<span data-i18n="command">ffmpeg command:</span>
+<button class="copy-btn" id="copyBtn" data-i18n="copy">Copy</button>
 </div>
 <textarea id="output" readonly spellcheck="false"></textarea>
-<div class="info">Nazwa pliku wyjściowego jest generowana automatycznie: <code>nazwa_wejścia</code> + korekcja EV.</div>
+<div class="info" id="info" data-i18n-html="info">Output file name is generated automatically: <code>input_name</code> + EV correction.</div>
 </div>
 </div>
 
@@ -582,14 +591,14 @@ const PROFILES = [
     { label: 'Sony S-Log2',         inst: new SLog2Profile() },
     { label: 'Sony S-Log3',         inst: new SLog3Profile() },
     { label: 'Panasonic V-Log',     inst: new VLogProfile() },
-    { label: 'Panasonic V-Log L',   inst: new VLogLProfile() },
+//    { label: 'Panasonic V-Log L',   inst: new VLogLProfile() },
     { label: 'Canon C-Log',         inst: new CLogProfile() },
     { label: 'Canon C-Log 2',       inst: new CLog2Profile() },
     { label: 'Canon C-Log 3',       inst: new CLog3Profile() },
     { label: 'Nikon N-Log',         inst: new NLogProfile() },
     { label: 'Fujifilm F-Log',      inst: new FLogProfile() },
     { label: 'Fujifilm F-Log 2',    inst: new FLog2Profile() },
-    { label: 'ARRI Log C (EI800)',  inst: new LogCProfile() },
+//    { label: 'ARRI Log C (EI800)',  inst: new LogCProfile() },
     { label: 'ARRI Log C3',         inst: new LogC3Profile() },
     { label: 'ARRI Log C4',         inst: new LogC4Profile() },
     { label: 'RED REDLogFilm',      inst: new REDLogFilmProfile() },
@@ -599,6 +608,86 @@ const PROFILES = [
     { label: 'Blackmagic Film Gen5',inst: new BMGen5Profile() },
     { label: 'Kodak Cineon',        inst: new CineonProfile() },
 ];
+
+// ============================================================
+// I18N
+// ============================================================
+const I18N = {
+    en: {
+        'title': 'FFmpeg Log Exposure Correction',
+        'profile': 'Log profile',
+        'ev': 'Exposure correction (EV)',
+        'points': 'Number of points',
+        'inputFile': 'Input file name',
+        'outputFile': 'Output file name (optional)',
+        'outputFilePlaceholder': 'empty = automatic',
+        'extraFilters': 'Extra video filters (after curves)',
+        'extraFiltersPlaceholder': 'e.g. eq=brightness=0.05,hue=h=10',
+        'extraOpts': 'ffmpeg options (output)',
+        'hiPrecision': 'Curves in 4:4:4 10-bit (less color shift)',
+        'generate': 'Generate',
+        'command': 'ffmpeg command:',
+        'copy': 'Copy',
+        'info': 'Output file name is generated automatically: <code>input_name</code> + EV correction.',
+        'errNumber': 'Enter a number, e.g. 0.5 or -2.',
+        'errEvRange': 'Range [-10, 10].',
+        'errInteger': 'Enter an integer.',
+        'errPointsRange': 'Range [2, 500].',
+        'errInputName': 'Enter the input file name.',
+    },
+    pl: {
+        'title': 'FFmpeg Log Exposure Correction',
+        'profile': 'Profil logarytmiczny',
+        'ev': 'Korekcja ekspozycji (EV)',
+        'points': 'Liczba punktów',
+        'inputFile': 'Nazwa pliku wejściowego',
+        'outputFile': 'Nazwa pliku wyjściowego (opcjonalnie)',
+        'outputFilePlaceholder': 'puste = automatycznie',
+        'extraFilters': 'Dodatkowe filtry video (po curves)',
+        'extraFiltersPlaceholder': 'np. eq=brightness=0.05,hue=h=10',
+        'extraOpts': 'Opcje ffmpeg (wyjściowe)',
+        'hiPrecision': 'Curves w 4:4:4 10-bit (mniejsza zmiana koloru)',
+        'generate': 'Generuj',
+        'command': 'Polecenie ffmpeg:',
+        'copy': 'Kopiuj',
+        'info': 'Nazwa pliku wyjściowego jest generowana automatycznie: <code>nazwa_wejścia</code> + korekcja EV.',
+        'errNumber': 'Podaj liczbę, np. 0.5 lub -2.',
+        'errEvRange': 'Zakres [-10, 10].',
+        'errInteger': 'Podaj liczbę całkowitą.',
+        'errPointsRange': 'Zakres [2, 500].',
+        'errInputName': 'Podaj nazwę pliku wejściowego.',
+    },
+};
+const LANG_KEY = 'ffmpeg-log-lang';
+let lang = 'en';
+let storeOK = false;
+try {
+    storeOK = window.localStorage !== undefined;
+} catch (e) { storeOK = false; }
+if (storeOK) {
+    try {
+        const saved = window.localStorage.getItem(LANG_KEY);
+        if (saved && I18N[saved]) lang = saved;
+    } catch (e) { storeOK = false; }
+}
+
+const t = key => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+
+function applyLang() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        el.innerHTML = t(el.getAttribute('data-i18n-html'));
+    });
+    if (storeOK) {
+        try { window.localStorage.setItem(LANG_KEY, lang); } catch (e) { storeOK = false; }
+    }
+}
 
 // ============================================================
 // UI
@@ -612,6 +701,7 @@ const resultBox = document.getElementById('result');
 const copyBtn = document.getElementById('copyBtn');
 const evDec = document.getElementById('evDec');
 const evInc = document.getElementById('evInc');
+const langBtn = document.getElementById('langBtn');
 const inputFileEl = document.getElementById('inputFile');
 const outputFileEl = document.getElementById('outputFile');
 const hiPrecisionEl = document.getElementById('hiPrecision');
@@ -626,6 +716,21 @@ for (const p of PROFILES) {
 }
 
 sel.value = 'Panasonic V-Log';
+
+function setLang(next) {
+    if (!I18N[next]) next = 'en';
+    lang = next;
+    langBtn.value = lang;
+    applyLang();
+}
+
+langBtn.addEventListener('change', () => {
+    setLang(langBtn.value);
+    generate();
+});
+
+applyLang();
+setLang(lang);
 
 evDec.addEventListener('click', () => {
     evInput.value = Math.max(-10, parseFloat(evInput.value) - 0.5).toFixed(1);
@@ -751,13 +856,13 @@ function generate() {
     const evStr = evInput.value.trim();
     const ev = parseFloat(evStr);
     if (!/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(evStr) || isNaN(ev)) {
-        showError('evError', 'Podaj liczbę, np. 0.5 lub -2.');
+        showError('evError', t('errNumber'));
         clearError('pointsNError');
         clearError('fileError');
         return;
     }
     if (ev < -10 || ev > 10) {
-        showError('evError', 'Zakres [-10, 10].');
+        showError('evError', t('errEvRange'));
         clearError('pointsNError');
         clearError('fileError');
         return;
@@ -766,13 +871,13 @@ function generate() {
     const nStr = pointsNInput.value.trim();
     const n = parseInt(nStr, 10);
     if (!/^\d+$/.test(nStr) || isNaN(n)) {
-        showError('pointsNError', 'Podaj liczbę całkowitą.');
+        showError('pointsNError', t('errInteger'));
         clearError('evError');
         clearError('fileError');
         return;
     }
     if (n < 2 || n > 150) {
-        showError('pointsNError', 'Zakres [2, 500].');
+        showError('pointsNError', t('errPointsRange'));
         clearError('evError');
         clearError('fileError');
         return;
@@ -780,7 +885,7 @@ function generate() {
 
     const inputName = inputFileEl.value.trim();
     if (inputName === '') {
-        showError('fileError', 'Podaj nazwę pliku wejściowego.');
+        showError('fileError', t('errInputName'));
         clearError('evError');
         clearError('pointsNError');
         return;
@@ -821,7 +926,9 @@ function generate() {
 genBtn.addEventListener('click', generate);
 
 copyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(outEl.value).catch(() => {});
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(outEl.value).catch(() => {});
+    }
 });
 
 // Auto-generate on load
