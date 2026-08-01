@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FFmpeg Log Exposure Tool</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;color:#ddd;font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.container{max-width:720px;width:100%;background:#1a1a1a;border-radius:12px;padding:32px;border:1px solid #333}
+h1{font-size:22px;margin-bottom:24px;color:#fff}
+.form-group{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:20px}
+.form-group label{flex-basis:100%;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#999;margin-bottom:6px}
+select,input[type=number],input[type=text]{width:100%;padding:10px 12px;background:#222;border:1px solid #444;border-radius:8px;color:#ddd;font-size:15px}
+select:focus,input[type=number]:focus,input[type=text]:focus{outline:none;border-color:#6af}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.ev-wrap{display:flex;gap:8px;align-items:center;flex:1;min-width:0}
+.ev-wrap input{flex:1}
+.ev-wrap button{width:40px;height:40px;border-radius:8px;border:1px solid #444;background:#222;color:#ddd;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ev-wrap button:hover{background:#333;border-color:#6af}
+.field{flex:1;min-width:0}
+.field-error{display:none;color:#ff6b6b;font-size:12px;flex:0 1 auto;max-width:40%}
+.field-error.show{display:inline-block}
+.btn-primary{width:100%;padding:12px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px}
+.btn-primary:hover{background:#1d4ed8}
+.result{margin-top:24px;display:none}
+.result-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.result-label span{font-size:13px;color:#999}
+.copy-btn{font-size:12px;padding:4px 12px;background:#333;border:1px solid #555;border-radius:6px;color:#ddd;cursor:pointer}
+.copy-btn:hover{background:#444}
+textarea{width:100%;height:200px;padding:12px;background:#0d0d0d;border:1px solid #333;border-radius:8px;color:#6f6;font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px;line-height:1.5;resize:vertical;tab-size:2}
+textarea:focus{outline:none;border-color:#6af}
+.info{font-size:12px;color:#666;margin-top:8px}
+.info code{background:#222;padding:1px 5px;border-radius:4px;color:#888}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>FFmpeg Log Exposure Correction</h1>
+
+<div class="form-group">
+<label for="profile">Profil logarytmiczny</label>
+<select id="profile"></select>
+</div>
+
+<div class="form-group">
+<label for="ev">Korekcja ekspozycji (EV)</label>
+<div class="ev-wrap">
+<button id="evDec" title="-0.5 EV">−</button>
+<input type="number" id="ev" value="0.0" step="0.166666666666666666666" min="-10" max="10">
+<button id="evInc" title="+0.5 EV">+</button>
+</div>
+<span class="field-error" id="evError"></span>
+</div>
+
+<div class="form-group">
+<label for="pointsN">Liczba punktów</label>
+<div class="field">
+<input type="number" id="pointsN" value="30" min="2" max="150" step="1">
+</div>
+<span class="field-error" id="pointsNError"></span>
+</div>
+
+<div class="form-group">
+<label for="inputFile">Nazwa pliku wejściowego</label>
+<div class="field">
+<input type="text" id="inputFile" value="input.mp4">
+</div>
+<span class="field-error" id="fileError"></span>
+</div>
+
+<div class="form-group">
+<label for="outputFile">Nazwa pliku wyjściowego (opcjonalnie)</label>
+<div class="field">
+<input type="text" id="outputFile" placeholder="puste = automatycznie">
+</div>
+</div>
+
+<div class="form-group">
+<label for="extraFilters">Dodatkowe filtry video (po curves)</label>
+<div class="field">
+<input type="text" id="extraFilters" placeholder="np. eq=brightness=0.05,hue=h=10">
+</div>
+</div>
+
+<div class="form-group">
+<label for="extraOpts">Opcje ffmpeg (wyjściowe)</label>
+<div class="field">
+<input type="text" id="extraOpts" value="-c:v libx264 -crf 18 -preset slow -c:a copy">
+</div>
+</div>
+
+<div class="form-group">
+<label for="hiPrecision"><input type="checkbox" id="hiPrecision" checked> Curves w 4:4:4 10-bit (mniejsza zmiana koloru)</label>
+</div>
+
+<button class="btn-primary" id="generate">Generuj</button>
+
+<div class="result" id="result">
+<div class="result-label">
+<span>Polecenie ffmpeg:</span>
+<button class="copy-btn" id="copyBtn">Kopiuj</button>
+</div>
+<textarea id="output" readonly spellcheck="false"></textarea>
+<div class="info">Nazwa pliku wyjściowego jest generowana automatycznie: <code>nazwa_wejścia</code> + korekcja EV.</div>
+</div>
+</div>
+
+<script>
+// ============================================================
+// Helper
+// ============================================================
+const log10 = Math.log10 || function (x) { return Math.log(x) / Math.LN10; };
+const log2 = Math.log2 || function (x) { return Math.log(x) / Math.LN2; };
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+// ============================================================
+// ImageProfile — klasa abstrakcyjna
+// ============================================================
+class ImageProfile {
+    constructor(name) { this._name = name; this._xMax = null; }
+    get name() { return this._name; }
+    get xMax() {
+        if (this._xMax === null) this._xMax = this.from_profile(1.0);
+        return this._xMax;
+    }
+    to_profile(x) { throw new Error('not implemented'); }
+    from_profile(y) { throw new Error('not implemented'); }
+}
+
+// ============================================================
+// Sony S-Log
+// ============================================================
+class SLogProfile extends ImageProfile {
+    constructor() { super('S-Log'); }
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const ire = x / 0.9;
+        const y = ire >= 0
+            ? 0.432699 * log10(ire + 0.037584) + 0.616596 + 0.03
+            : ire * 5 + 0.03000185189303;
+        return (4 * (16 + 219 * y)) / 1023;
+    }
+    from_profile(y) {
+        const ire = (y * 1023 / 4 - 16) / 219;
+        const linear = ire >= 0
+            ? Math.pow(10, (ire - 0.616596 - 0.03) / 0.432699) - 0.037584
+            : (ire - 0.03000185189303) / 5;
+        return linear * 0.9;
+    }
+}
+
+// ============================================================
+// Sony S-Log2 — S-Log ze skalowaniem wejścia
+// ============================================================
+class SLog2Profile extends ImageProfile {
+    constructor() { super('S-Log2'); this._slog = new SLogProfile(); }
+    to_profile(x) { return this._slog.to_profile(x * 155 / 219); }
+    from_profile(y) { return this._slog.from_profile(y) * 219 / 155; }
+}
+
+// ============================================================
+// Sony S-Log3
+// ============================================================
+class SLog3Profile extends ImageProfile {
+    constructor() { super('S-Log3'); }
+    static CUT = 0.01125;
+    static MG = 0.18;
+    static EPS = 0.01;
+    static LOG_KNEE = 420;
+    static LOG_SLOPE = 261.5;
+    static TOE_SLOPE = (171.2102946929 - 95) / 0.01125;
+    static TOE_OFF = 95;
+    static MAX = 1023;
+    static LOG_CUT = 171.2102946929 / 1023;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        if (x < SLog3Profile.CUT) {
+            return (x * SLog3Profile.TOE_SLOPE + SLog3Profile.TOE_OFF) / SLog3Profile.MAX;
+        }
+        return (SLog3Profile.LOG_KNEE + log10((x + SLog3Profile.EPS) / (SLog3Profile.MG + SLog3Profile.EPS)) * SLog3Profile.LOG_SLOPE) / SLog3Profile.MAX;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        if (y < SLog3Profile.LOG_CUT) {
+            return (y * SLog3Profile.MAX - SLog3Profile.TOE_OFF) / SLog3Profile.TOE_SLOPE;
+        }
+        return Math.pow(10, (y * SLog3Profile.MAX - SLog3Profile.LOG_KNEE) / SLog3Profile.LOG_SLOPE) * (SLog3Profile.MG + SLog3Profile.EPS) - SLog3Profile.EPS;
+    }
+}
+
+// ============================================================
+// Panasonic V-Log / V-Log L
+// ============================================================
+class VLogProfile extends ImageProfile {
+    constructor(name = 'V-Log') { super(name); }
+    static CUT = 0.01;
+    static B = 0.00873;
+    static C = 0.241514;
+    static D = 0.598206;
+    static LIN_SLOPE = 5.6;
+    static LIN_OFF = 0.125;
+    static LOG_CUT = 0.181;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        return x < VLogProfile.CUT
+            ? VLogProfile.LIN_SLOPE * x + VLogProfile.LIN_OFF
+            : VLogProfile.C * log10(x + VLogProfile.B) + VLogProfile.D;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        return y < VLogProfile.LOG_CUT
+            ? (y - VLogProfile.LIN_OFF) / VLogProfile.LIN_SLOPE
+            : Math.pow(10, (y - VLogProfile.D) / VLogProfile.C) - VLogProfile.B;
+    }
+}
+class VLogLProfile extends VLogProfile {
+    constructor() { super('V-Log L'); }
+}
+
+// ============================================================
+// Canon C-Log
+// ============================================================
+class CLogProfile extends ImageProfile {
+    constructor(name = 'C-Log') { super(name); }
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const ire = x / 0.9;
+        return ire < 0
+            ? -(0.529136 * (log10(-ire * 10.1596 + 1)) - 0.0730597)
+            : 0.529136 * log10(ire * 10.1596 + 1) + 0.0730597;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        const ire = y < 0.0730597
+            ? (1 - Math.pow(10, (0.0730597 - y) / 0.529136)) / 10.1596
+            : (Math.pow(10, (y - 0.0730597) / 0.529136) - 1) / 10.1596;
+        return ire * 0.9;
+    }
+}
+
+// ============================================================
+// Canon C-Log 2
+// ============================================================
+class CLog2Profile extends ImageProfile {
+    constructor() { super('C-Log 2'); }
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const ire = x / 0.9;
+        return ire < 0
+            ? -(0.24136077 * log10(-ire * 87.099375 + 1) - 0.092864125)
+            : 0.24136077 * log10(ire * 87.099375 + 1) + 0.092864125;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        const ire = y < 0.092864125
+            ? (1 - Math.pow(10, (0.092864125 - y) / 0.24136077)) / 87.099375
+            : (Math.pow(10, (y - 0.092864125) / 0.24136077) - 1) / 87.099375;
+        return ire * 0.9;
+    }
+}
+
+// ============================================================
+// Canon C-Log 3 — 3-segment
+// ============================================================
+class CLog3Profile extends ImageProfile {
+    constructor() { super('C-Log 3'); }
+    static CUT_NEG = -0.0126;
+    static CUT_POS = 0.0126;
+    static A_POS = 0.36726845;
+    static B = 14.98325;
+    static C_NEG = 0.12783901;
+    static C_MID = 0.12512219;
+    static C_POS = 0.12240537;
+    static LIN_SLOPE = 1.9754798;
+    static LIN_CUT_LO = 0.097465473;
+    static LIN_CUT_HI = 0.15277891;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const ire = x / 0.9;
+        if (ire < CLog3Profile.CUT_NEG) {
+            return -CLog3Profile.A_POS * log10(-ire * CLog3Profile.B + 1) + CLog3Profile.C_NEG;
+        } else if (ire <= CLog3Profile.CUT_POS) {
+            return CLog3Profile.LIN_SLOPE * ire + CLog3Profile.C_MID;
+        } else {
+            return CLog3Profile.A_POS * log10(ire * CLog3Profile.B + 1) + CLog3Profile.C_POS;
+        }
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        if (y < CLog3Profile.LIN_CUT_LO) {
+            const ire = (1 - Math.pow(10, (CLog3Profile.C_NEG - y) / CLog3Profile.A_POS)) / CLog3Profile.B;
+            return ire * 0.9;
+        } else if (y <= CLog3Profile.LIN_CUT_HI) {
+            const ire = (y - CLog3Profile.C_MID) / CLog3Profile.LIN_SLOPE;
+            return ire * 0.9;
+        } else {
+            const ire = (Math.pow(10, (y - CLog3Profile.C_POS) / CLog3Profile.A_POS) - 1) / CLog3Profile.B;
+            return ire * 0.9;
+        }
+    }
+}
+
+// ============================================================
+// Nikon N-Log
+// ============================================================
+class NLogProfile extends ImageProfile {
+    constructor() { super('N-Log'); }
+    static CUT = 0.328;
+    static A = 650 / 1023;
+    static B = 0.0075;
+    static C = 150 / 1023;
+    static D = 619 / 1023;
+    static LOG_CUT = 452 / 1023;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        return x < NLogProfile.CUT
+            ? NLogProfile.A * Math.pow(x + NLogProfile.B, 1 / 3)
+            : NLogProfile.C * Math.log(x) + NLogProfile.D;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        return y < NLogProfile.LOG_CUT
+            ? Math.pow(y / NLogProfile.A, 3) - NLogProfile.B
+            : Math.exp((y - NLogProfile.D) / NLogProfile.C);
+    }
+}
+
+// ============================================================
+// Fujifilm F-Log
+// ============================================================
+class FLogProfile extends ImageProfile {
+    constructor(name = 'F-Log') { super(name); }
+    static CUT = 0.00089;
+    static A = 0.555556;
+    static B = 0.009468;
+    static C = 0.344676;
+    static D = 0.790453;
+    static E = 8.735631;
+    static F = 0.092864;
+    static LOG_CUT = 0.100537775223865;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        return x < FLogProfile.CUT
+            ? FLogProfile.E * x + FLogProfile.F
+            : FLogProfile.C * log10(FLogProfile.A * x + FLogProfile.B) + FLogProfile.D;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        return y < FLogProfile.LOG_CUT
+            ? (y - FLogProfile.F) / FLogProfile.E
+            : (Math.pow(10, (y - FLogProfile.D) / FLogProfile.C) - FLogProfile.B) / FLogProfile.A;
+    }
+}
+
+// ============================================================
+// Fujifilm F-Log 2
+// ============================================================
+class FLog2Profile extends ImageProfile {
+    constructor() { super('F-Log 2'); }
+    static CUT = 0.000889;
+    static A = 0.555556;
+    static B = 0.064829;
+    static C = 0.245281;
+    static D = 0.384316;
+    static E = 8.799461;
+    static F = 0.092864;
+    static LOG_CUT = 0.100686685370811;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        return x < FLog2Profile.CUT
+            ? FLog2Profile.E * x + FLog2Profile.F
+            : FLog2Profile.C * log10(FLog2Profile.A * x + FLog2Profile.B) + FLog2Profile.D;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        return y < FLog2Profile.LOG_CUT
+            ? (y - FLog2Profile.F) / FLog2Profile.E
+            : (Math.pow(10, (y - FLog2Profile.D) / FLog2Profile.C) - FLog2Profile.B) / FLog2Profile.A;
+    }
+}
+
+// ============================================================
+// ARRI Log C (EI 800)
+// ============================================================
+class LogCProfile extends ImageProfile {
+    constructor(name = 'Log C (EI800)') { super(name); }
+    static CUT = 0.010591;
+    static A = 5.555556;
+    static B = 0.052272;
+    static C = 0.247190;
+    static D = 0.385537;
+    static E = 5.367655;
+    static F = 0.092809;
+    static LOG_CUT = 0.149658;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const raw = x > LogCProfile.CUT
+            ? LogCProfile.C * log10(LogCProfile.A * x + LogCProfile.B) + LogCProfile.D
+            : LogCProfile.E * x + LogCProfile.F;
+        return raw;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        return y > LogCProfile.LOG_CUT
+            ? (Math.pow(10, (y - LogCProfile.D) / LogCProfile.C) - LogCProfile.B) / LogCProfile.A
+            : (y - LogCProfile.F) / LogCProfile.E;
+    }
+}
+
+// ============================================================
+// ARRI Log C3 — same as Log C (already v3)
+// ============================================================
+class LogC3Profile extends LogCProfile {
+    constructor() { super('Log C3'); }
+}
+
+// ============================================================
+// ARRI Log C4
+// ============================================================
+class LogC4Profile extends ImageProfile {
+    constructor() { super('Log C4'); }
+    static get A() { return (Math.pow(2, 18) - 16) / 117.45; }
+    static get B() { return (1023 - 95) / 1023; }
+    static get C() { return 95 / 1023; }
+    static get S() {
+        const a = LogC4Profile.A, b = LogC4Profile.B, c = LogC4Profile.C;
+        return (7 * Math.log(2) * Math.pow(2, 7 - 14 * c / b)) / (a * b);
+    }
+    static get T() {
+        const a = LogC4Profile.A, b = LogC4Profile.B, c = LogC4Profile.C;
+        return (Math.pow(2, 14 * (-c / b) + 6) - 64) / a;
+    }
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const a = LogC4Profile.A, b = LogC4Profile.B, c = LogC4Profile.C;
+        const s = LogC4Profile.S, t = LogC4Profile.T;
+        return x >= t
+            ? ((log2(a * x + 64) - 6) / 14 * b + c)
+            : (x - t) / s;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        const a = LogC4Profile.A, b = LogC4Profile.B, c = LogC4Profile.C;
+        const s = LogC4Profile.S, t = LogC4Profile.T;
+        return y < 0
+            ? y * s + t
+            : (Math.pow(2, 14 * ((y - c) / b) + 6) - 64) / a;
+    }
+}
+
+// ============================================================
+// REDLogFilm — Cineon-based
+// ============================================================
+class REDLogFilmProfile extends ImageProfile {
+    constructor() { super('REDLogFilm'); }
+    static BO = Math.pow(10, (95 - 685) / 300);
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const bo = REDLogFilmProfile.BO;
+        return (685 + 300 * log10(x * (1 - bo) + bo)) / 1023;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        const bo = REDLogFilmProfile.BO;
+        return (Math.pow(10, (1023 * y - 685) / 300) - bo) / (1 - bo);
+    }
+}
+// ============================================================
+// GoPro GP-Log (base 400)
+// ============================================================
+class GPLogProfile extends ImageProfile {
+    constructor(name = 'GP-Log', base = 400) {
+        super(name);
+        this._base = base;
+    }
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const b = this._base;
+        return Math.log(x * (b - 1) + 1) / Math.log(b);
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        const b = this._base;
+        return (Math.pow(b, y) - 1) / (b - 1);
+    }
+}
+class GPLog2Profile extends GPLogProfile {
+    constructor() { super('GP-Log 2', 600); }
+}
+
+// ============================================================
+// DJI D-Log
+// ============================================================
+class DLogProfile extends ImageProfile {
+    constructor() { super('D-Log'); }
+    static CUT = 0.0078;
+    static A = 0.9892;
+    static B = 0.0108;
+    static C = 0.256663;
+    static D = 0.584555;
+    static LIN_SLOPE = 6.025;
+    static LIN_OFF = 0.0929;
+    static LOG_CUT = 0.14;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        return x <= DLogProfile.CUT
+            ? DLogProfile.LIN_SLOPE * x + DLogProfile.LIN_OFF
+            : log10(x * DLogProfile.A + DLogProfile.B) * DLogProfile.C + DLogProfile.D;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        return y <= DLogProfile.LOG_CUT
+            ? (y - DLogProfile.LIN_OFF) / DLogProfile.LIN_SLOPE
+            : (Math.pow(10, 3.89616 * y - 2.27752) - DLogProfile.B) / DLogProfile.A;
+    }
+}
+
+// ============================================================
+// Blackmagic Film Generation 5
+// ============================================================
+class BMGen5Profile extends ImageProfile {
+    constructor() { super('BM Film Gen 5'); }
+    static A = 0.08692876065491224;
+    static B = 0.005494072432257808;
+    static C = 0.5300133392291939;
+    static D = 8.283605932402494;
+    static E = 0.09246575342465753;
+    static LIN_CUT = 0.005;
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        return x < BMGen5Profile.LIN_CUT
+            ? BMGen5Profile.D * x + BMGen5Profile.E
+            : BMGen5Profile.A * Math.log(x + BMGen5Profile.B) + BMGen5Profile.C;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        const logCut = BMGen5Profile.D * BMGen5Profile.LIN_CUT + BMGen5Profile.E;
+        return y < logCut
+            ? (y - BMGen5Profile.E) / BMGen5Profile.D
+            : Math.exp((y - BMGen5Profile.C) / BMGen5Profile.A) - BMGen5Profile.B;
+    }
+}
+
+// ============================================================
+// Cineon (Kodak)
+// ============================================================
+class CineonProfile extends ImageProfile {
+    constructor() { super('Cineon'); }
+    static BO = Math.pow(10, (95 - 685) / 300);
+
+    to_profile(x) {
+        x = clamp(x, 0, this.xMax);
+        const bo = CineonProfile.BO;
+        return (685 + 300 * log10(x * (1 - bo) + bo)) / 1023;
+    }
+    from_profile(y) {
+        y = clamp(y, 0, 1);
+        const bo = CineonProfile.BO;
+        return (Math.pow(10, (1023 * y - 685) / 300) - bo) / (1 - bo);
+    }
+}
+
+// ============================================================
+// Rejestr profilów
+// ============================================================
+const PROFILES = [
+    { label: 'Sony S-Log',          inst: new SLogProfile() },
+    { label: 'Sony S-Log2',         inst: new SLog2Profile() },
+    { label: 'Sony S-Log3',         inst: new SLog3Profile() },
+    { label: 'Panasonic V-Log',     inst: new VLogProfile() },
+    { label: 'Panasonic V-Log L',   inst: new VLogLProfile() },
+    { label: 'Canon C-Log',         inst: new CLogProfile() },
+    { label: 'Canon C-Log 2',       inst: new CLog2Profile() },
+    { label: 'Canon C-Log 3',       inst: new CLog3Profile() },
+    { label: 'Nikon N-Log',         inst: new NLogProfile() },
+    { label: 'Fujifilm F-Log',      inst: new FLogProfile() },
+    { label: 'Fujifilm F-Log 2',    inst: new FLog2Profile() },
+    { label: 'ARRI Log C (EI800)',  inst: new LogCProfile() },
+    { label: 'ARRI Log C3',         inst: new LogC3Profile() },
+    { label: 'ARRI Log C4',         inst: new LogC4Profile() },
+    { label: 'RED REDLogFilm',      inst: new REDLogFilmProfile() },
+    { label: 'GoPro GP-Log',        inst: new GPLogProfile() },
+    { label: 'GoPro GP-Log 2',      inst: new GPLog2Profile() },
+    { label: 'DJI D-Log',           inst: new DLogProfile() },
+    { label: 'Blackmagic Film Gen5',inst: new BMGen5Profile() },
+    { label: 'Kodak Cineon',        inst: new CineonProfile() },
+];
+
+// ============================================================
+// UI
+// ============================================================
+const sel = document.getElementById('profile');
+const evInput = document.getElementById('ev');
+const pointsNInput = document.getElementById('pointsN');
+const genBtn = document.getElementById('generate');
+const outEl = document.getElementById('output');
+const resultBox = document.getElementById('result');
+const copyBtn = document.getElementById('copyBtn');
+const evDec = document.getElementById('evDec');
+const evInc = document.getElementById('evInc');
+const inputFileEl = document.getElementById('inputFile');
+const outputFileEl = document.getElementById('outputFile');
+const hiPrecisionEl = document.getElementById('hiPrecision');
+const extraFiltersEl = document.getElementById('extraFilters');
+const extraOptsEl = document.getElementById('extraOpts');
+
+for (const p of PROFILES) {
+    const opt = document.createElement('option');
+    opt.value = p.label;
+    opt.textContent = p.label;
+    sel.appendChild(opt);
+}
+
+sel.value = 'Panasonic V-Log';
+
+evDec.addEventListener('click', () => {
+    evInput.value = Math.max(-10, parseFloat(evInput.value) - 0.5).toFixed(1);
+});
+evInc.addEventListener('click', () => {
+    evInput.value = Math.min(10, parseFloat(evInput.value) + 0.5).toFixed(1);
+});
+
+// ============================================================
+// Generowanie
+// ============================================================
+// Stała liczba punktów w sekcji liniowej
+const LIN_POINTS = 5;
+
+// Próg sekcji liniowej (w dziedzinie liniowej) dla profili z toe
+function getLinCut(profile) {
+    const cls = profile.constructor;
+    const cuts = [
+        [VLogProfile,   VLogProfile.CUT],
+        [SLog3Profile,  SLog3Profile.CUT],
+        [FLogProfile,   FLogProfile.CUT],
+        [FLog2Profile,  FLog2Profile.CUT],
+        [DLogProfile,   DLogProfile.CUT],
+        [LogCProfile,   LogCProfile.CUT],
+        [BMGen5Profile, BMGen5Profile.LIN_CUT],
+        [CLog3Profile,  CLog3Profile.CUT_POS * 0.9], // IRE → odbicie
+    ];
+    for (const [Cls, cut] of cuts) {
+        if (cls === Cls || cls.prototype instanceof Cls) return cut;
+    }
+    return null;
+}
+
+function generatePoints(profile, ev, n = 30) {
+    const points = [];
+    const pow2ev = Math.pow(2, ev);
+    const lo = profile.to_profile(0.0);
+    const hi = Math.min(1.0, profile.to_profile(profile.from_profile(1.0) / pow2ev));
+
+    const linCut = getLinCut(profile);
+
+    if (linCut !== null && linCut > 0) {
+        // Zakres sekcji liniowej obejmuje wejściową i wyjściową sekcję liniową
+        const tCut = clamp(Math.max(profile.to_profile(linCut), profile.to_profile(linCut / pow2ev)), lo, hi);
+        if (tCut < hi) {
+            // Sekcja liniowa: stała liczba punktów w [lo, tCut]
+            const nLin = LIN_POINTS;
+            for (let i = 0; i <= nLin; i++) {
+                points.push(lo + (i / nLin) * (tCut - lo));
+            }
+            // Sekcja logarytmiczna: pozostałe punkty z parametru formularza w (tCut, hi]
+            const nLog = Math.max(1, n - nLin);
+            for (let i = 1; i <= nLog; i++) {
+                points.push(tCut + (i / nLog) * (hi - tCut));
+            }
+        } else {
+            for (let i = 0; i <= n; i++) {
+                points.push(lo + (i / n) * (hi - lo));
+            }
+        }
+    } else {
+        for (let i = 0; i <= n; i++) {
+            points.push(lo + (i / n) * (hi - lo));
+        }
+    }
+
+    // Sortuj i usuń duplikaty
+    points.sort((a, b) => a - b);
+    const uniq = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+        if (points[i] - uniq[uniq.length - 1] > 1e-10) uniq.push(points[i]);
+    }
+
+    // Oblicz wartości curves
+    const pairs = uniq.map(t => {
+        const lin = Math.max(0, profile.from_profile(t));
+        const adj = lin * pow2ev;
+        const encoded = profile.to_profile(adj);
+        return [t, clamp(encoded, 0, 1)];
+    });
+    // Punkt (0,0) — obiektywna czerń, zamiast pierwszego punktu na progu IRE
+    if (pairs.length && pairs[0][0] > 1e-10) pairs.unshift([0, 0]);
+    return pairs;
+}
+
+function fmt(n) {
+    return n.toFixed(6).replace(/\.?0+$/, '');
+}
+function formatCurves(pairs) {
+    return pairs.map(([t, v]) => fmt(t) + '/' + fmt(v)).join(' ');
+}
+
+function fmtEv(ev) {
+    const v = Math.round(ev * 10000) / 10000;
+    return String(v).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+}
+
+function buildOutputName(input, ev) {
+    const dirIdx = Math.max(input.lastIndexOf('/'), input.lastIndexOf('\\'));
+    const dir = dirIdx >= 0 ? input.slice(0, dirIdx + 1) : '';
+    let file = input.slice(dirIdx + 1);
+    const dot = file.lastIndexOf('.');
+    const base = dot > 0 ? file.slice(0, dot) : file;
+    const ext = dot > 0 ? file.slice(dot) : '';
+    return dir + base + '_' + fmtEv(ev) + 'ev' + ext;
+}
+
+function generate() {
+    const label = sel.value;
+    const entry = PROFILES.find(p => p.label === label);
+    if (!entry) return;
+
+    const showError = (id, msg) => {
+        document.getElementById(id).textContent = msg;
+        document.getElementById(id).classList.add('show');
+        resultBox.style.display = 'none';
+    };
+    const clearError = (id) => {
+        document.getElementById(id).textContent = '';
+        document.getElementById(id).classList.remove('show');
+    };
+
+    const evStr = evInput.value.trim();
+    const ev = parseFloat(evStr);
+    if (!/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(evStr) || isNaN(ev)) {
+        showError('evError', 'Podaj liczbę, np. 0.5 lub -2.');
+        clearError('pointsNError');
+        clearError('fileError');
+        return;
+    }
+    if (ev < -10 || ev > 10) {
+        showError('evError', 'Zakres [-10, 10].');
+        clearError('pointsNError');
+        clearError('fileError');
+        return;
+    }
+
+    const nStr = pointsNInput.value.trim();
+    const n = parseInt(nStr, 10);
+    if (!/^\d+$/.test(nStr) || isNaN(n)) {
+        showError('pointsNError', 'Podaj liczbę całkowitą.');
+        clearError('evError');
+        clearError('fileError');
+        return;
+    }
+    if (n < 2 || n > 150) {
+        showError('pointsNError', 'Zakres [2, 500].');
+        clearError('evError');
+        clearError('fileError');
+        return;
+    }
+
+    const inputName = inputFileEl.value.trim();
+    if (inputName === '') {
+        showError('fileError', 'Podaj nazwę pliku wejściowego.');
+        clearError('evError');
+        clearError('pointsNError');
+        return;
+    }
+
+    clearError('evError');
+    clearError('pointsNError');
+    clearError('fileError');
+
+    const points = generatePoints(entry.inst, ev, n);
+    const curves = formatCurves(points);
+
+    const extraFilters = extraFiltersEl.value.trim();
+    const extraOpts = extraOptsEl.value.trim();
+    const outputName = outputFileEl.value.trim() || buildOutputName(inputName, ev);
+
+    let vf = '';
+    if (ev === 0) {
+        // Zerowa korekcja — curves jest tożsamością, pomiń filtr
+        vf = extraFilters ? ' -vf "' + extraFilters + '"' : '';
+    } else {
+        // Curves działa w RGB — praca w 4:4:4 10-bit ogranicza stratę przy konwersji YUV→RGB→YUV
+        // Format wyjściowy (np. -pix_fmt yuv420p10le) ustawia sam użytkownik w opcjach ffmpeg
+        const curvesPart = hiPrecisionEl.checked
+            ? 'format=yuv444p10le,curves=all=\'' + curves + '\''
+            : 'curves=all=\'' + curves + '\'';
+        const parts = [curvesPart];
+        if (extraFilters) parts.push(extraFilters);
+        vf = ' -vf "' + parts.join(',') + '"';
+    }
+
+    const cmd = 'ffmpeg -i "' + inputName + '"' + vf + (extraOpts ? ' ' + extraOpts : '') + ' "' + outputName + '"';
+
+    outEl.value = cmd;
+    resultBox.style.display = 'block';
+}
+
+genBtn.addEventListener('click', generate);
+
+copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(outEl.value).catch(() => {});
+});
+
+// Auto-generate on load
+generate();
+</script>
+</body>
+</html>
