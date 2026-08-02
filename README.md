@@ -29,123 +29,111 @@ The tool uses yuv444 conversion before curves to minimize conversion inaccuracie
 
 ## Sample footage
 
-The scene was shot on a Lumix S1 in V-Log. The reference is a frame
-at **ISO 2500** — no exposure correction applied. Keep in mind, for ISO 5000 and 10000 camera kicks into higher base ISO.
-
-
-| ISO | Shutter | Correction |
-|-----|---------|------------|
-| 640 | 1/15 s  | **+5 EV**  |
-| 640 | 1/8 s   | **+4 EV**  |
-| 640 | 1/4 s   | **+3 EV**  |
-| 640 | 1/2 s   | **+2 EV**  |
-| 1250 | 1/2 s  | **+1 EV**  |
-| 2500 | 1/2 s  | **0 EV**   |
-| 5000 | 1/2 s  | **−1 EV**  |
-| 10000 | 1/2 s | **−2 EV**  |
+The scene was shot on a Lumix S1 in V-Log. The reference is a frame at
+**ISO 2500** — no exposure correction applied. Keep in mind, above ISO 4000
+camera kicks into higher base ISO.
 
 ---
 
-## 1. With LUT vs without LUT (ISO 2500 reference)
-
-Each row: the same scene, different ISO / shutter. The reference (ISO 2500,
-16-bit) shows the intended look. The *Without LUT* column is the log footage
-without the cosmetic LUT; the *With LUT* column is the same footage after
-applying the cosmetic LUT (default 30-point curve).
+## 1. Comparisons
 
 ### ISO 640 → +2 EV
 
-| Reference ISO 2500 | Without LUT | Reference ISO 2500 with LUT | With LUT |
+| Reference | Without LUT | Reference with LUT | With LUT |
 |--------------------|-------------|-----------------------------|----------|
 | ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![640 without LUT](images/ISO_640_S_2_2ev.png) | ![ref with LUT](images/ISO_2500_S_2_REFERENCE_lut.png) | ![640 with LUT](images/ISO_640_S_2_2ev_lut.png) |
 
-### ISO 1250 → +1 EV
-
-| Reference ISO 2500 | Without LUT | Reference ISO 2500 with LUT | With LUT |
-|--------------------|-------------|-----------------------------|----------|
-| ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![1250 without LUT](images/ISO_1250_S_2_1ev.png) | ![ref with LUT](images/ISO_2500_S_2_REFERENCE_lut.png) | ![1250 with LUT](images/ISO_1250_S_2_1ev_lut.png) |
-
 ### ISO 2500 → 0 EV
 
-| Reference ISO 2500 | With LUT |
+| Reference | Reference with LUT |
 |--------------------|----------|
 | ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![ref with LUT](images/ISO_2500_S_2_REFERENCE_lut.png) |
 
-### ISO 5000 → −1 EV
-
-| Reference ISO 2500 | Without LUT | Reference ISO 2500 with LUT | With LUT |
-|--------------------|-------------|-----------------------------|----------|
-| ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![5000 without LUT](images/ISO_5000_S_2_-1ev.png) | ![ref with LUT](images/ISO_2500_S_2_REFERENCE_lut.png) | ![5000 with LUT](images/ISO_5000_S_2_-1ev_lut.png) |
-
 ### ISO 10000 → −2 EV
 
-| Reference ISO 2500 | Without LUT | Reference ISO 2500 with LUT | With LUT |
+| Reference | Without LUT | Reference with LUT | With LUT |
 |--------------------|-------------|-----------------------------|----------|
 | ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![10000 without LUT](images/ISO_10000_S_2_-2ev.png) | ![ref with LUT](images/ISO_2500_S_2_REFERENCE_lut.png) | ![10000 with LUT](images/ISO_10000_S_2_-2ev_lut.png) |
 
-### Bonus: correction range at ISO 640
-
-The same sensor at ISO 640 with different shutter speeds — correction from
-**+2 EV** to **+5 EV**.
-
-| Reference ISO 2500 with LUT | +2 EV (1/2 s) | +3 EV (1/4 s) | +4 EV (1/8 s) | +5 EV (1/15 s) |
-|-----------------------------|---------------|---------------|---------------|----------------|
-| ![ref with LUT](images/ISO_2500_S_2_REFERENCE_lut.png) | ![2](images/ISO_640_S_2_2ev_lut.png) | ![3](images/ISO_640_S_4_3ev_lut.png) | ![4](images/ISO_640_S_8_4ev_lut.png) | ![5](images/ISO_640_S_15_5ev_lut.png) |
-
 ---
 
-## 2. Influence of the LUT curve point count
+## 2. Influence of the curve point count
 
-The default number of points is **30**.
-Below are the same corrections with the exposure curve built from **5, 10, 30, 50,
-100 and 150** points.
+The default number of points is **20**.
+Below are the same corrections with the exposure curve built from **6, 10, 20, 30,
+50, 100 and 150**.
 
 NOTE: at very high point counts curves filter throws error. Not very significant as diminishing returns kick in very early.
 
 ### ISO 640 → +2 EV
 
-| 5 pts | 10 pts | 30 pts (default) |
-|-------|--------|------------------|
-| ![5p](images/ISO_640_S_2_2ev_lut_5p.png) | ![10p](images/ISO_640_S_2_2ev_lut_10p.png) | ![30p](images/ISO_640_S_2_2ev_lut.png) |
+| Reference | 6 pts | 10 pts | 20 pts |
+|-----------|-------|--------|--------|
+| ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![6p](images/ISO_640_S_2_2ev_6p.png) | ![10p](images/ISO_640_S_2_2ev_10p.png) | ![20p](images/ISO_640_S_2_2ev_20p.png) |
 
-| 50 pts | 100 pts | 150 pts |
-|--------|---------|---------|
-| ![50p](images/ISO_640_S_2_2ev_lut_50p.png) | ![100p](images/ISO_640_S_2_2ev_lut_100p.png) | ![150p](images/ISO_640_S_2_2ev_lut_150p.png) |
+| 30 pts | 50 pts | 100 pts | 150 pts |
+|--------|--------|---------|---------|
+| ![30p](images/ISO_640_S_2_2ev.png) | ![50p](images/ISO_640_S_2_2ev_50p.png) | ![100p](images/ISO_640_S_2_2ev_100p.png) | ![150p](images/ISO_640_S_2_2ev_150p.png) |
 
 ### ISO 10000 → −2 EV
 
-| 5 pts | 10 pts | 30 pts (default) |
-|-------|--------|------------------|
-| ![5p](images/ISO_10000_S_2_-2ev_lut_5p.png) | ![10p](images/ISO_10000_S_2_-2ev_lut_10p.png) | ![30p](images/ISO_10000_S_2_-2ev_lut.png) |
+| Reference | 6 pts | 10 pts | 20 pts |
+|-----------|-------|--------|--------|
+| ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![6p](images/ISO_10000_S_2_-2ev_6p.png) | ![10p](images/ISO_10000_S_2_-2ev_10p.png) | ![20p](images/ISO_10000_S_2_-2ev_20p.png) |
 
-| 50 pts | 100 pts | 150 pts |
-|--------|---------|---------|
-| ![50p](images/ISO_10000_S_2_-2ev_lut_50p.png) | ![100p](images/ISO_10000_S_2_-2ev_lut_100p.png) | ![150p](images/ISO_10000_S_2_-2ev_lut_150p.png) |
+| 30 pts | 50 pts | 100 pts | 150 pts |
+|--------|--------|---------|---------|
+| ![30p](images/ISO_10000_S_2_-2ev.png) | ![50p](images/ISO_10000_S_2_-2ev_50p.png) | ![100p](images/ISO_10000_S_2_-2ev_100p.png) | ![150p](images/ISO_10000_S_2_-2ev_150p.png) |
 
 ### Difference vs the 150-point reference (PSNR/SSIM)
 
 Reference for the comparison is the **150-point** variant (highest point count
-available). The 5-point variant clearly deviates; from 10 points on,
-differences are at the level of conversion noise (47–50 dB, SSIM ≈ 0.99+).
+available). The 6-point variant clearly deviates; from 10 points on,
+differences are at the level of conversion noise.
 
 **ISO 640 / +2 EV**
 
 | Variant | PSNR vs 150 pts | SSIM vs 150 pts |
 |---------|-----------------|-----------------|
-| 5 pts | 33.0 dB | 0.992 |
-| 10 pts | 49.3 dB | 0.996 |
-| 30 pts | 48.3 dB | 0.996 |
-| 50 pts | 48.8 dB | 0.995 |
-| 100 pts | 47.3 dB | 0.993 |
+| 6 pts | 36.7 dB | 0.996 |
+| 10 pts | 55.1 dB | 0.999 |
+| 20 pts | 54.2 dB | 0.998 |
+| 30 pts | 54.2 dB | 0.999 |
+| 50 pts | 54.8 dB | 0.998 |
+| 100 pts | 53.3 dB | 0.997 |
 | 150 pts | — (reference) | — (reference) |
 
 **ISO 10000 / −2 EV**
 
 | Variant | PSNR vs 150 pts | SSIM vs 150 pts |
 |---------|-----------------|-----------------|
-| 5 pts | 32.7 dB | 0.990 |
-| 10 pts | 49.9 dB | 0.997 |
-| 30 pts | 48.0 dB | 0.995 |
-| 50 pts | 49.7 dB | 0.997 |
-| 100 pts | 49.9 dB | 0.996 |
+| 6 pts | 37.5 dB | 0.997 |
+| 10 pts | 55.5 dB | 0.999 |
+| 20 pts | 53.7 dB | 0.998 |
+| 30 pts | 53.5 dB | 0.998 |
+| 50 pts | 55.1 dB | 0.999 |
+| 100 pts | 55.1 dB | 0.998 |
 | 150 pts | — (reference) | — (reference) |
+
+### Round trip
+
+A round-trip test on the ISO 2500 reference frame: the exposure curve was
+applied **5 times** (4× **+0.5 EV**, then **−2 EV**).
+
+| Reference | 6 pts | 10 pts | 20 pts |
+|-----------|-------|--------|--------|
+| ![ref](images/ISO_2500_S_2_REFERENCE.png) | ![5p](images/ISO_2500_S_2_REFERENCE_05ev_05ev_05ev_05ev_-2ev_6p.png) | ![10p](images/ISO_2500_S_2_REFERENCE_05ev_05ev_05ev_05ev_-2ev_10p.png) | ![20p](images/ISO_2500_S_2_REFERENCE_05ev_05ev_05ev_05ev_-2ev_20p.png) |
+
+| 30 pts | 50 pts | 100 pts | 150 pts |
+|--------|--------|---------|---------|
+| ![30p](images/ISO_2500_S_2_REFERENCE_05ev_05ev_05ev_05ev_-2ev_30p.png) | ![50p](images/ISO_2500_S_2_REFERENCE_05ev_05ev_05ev_05ev_-2ev_50p.png) | ![100p](images/ISO_2500_S_2_REFERENCE_05ev_05ev_05ev_05ev_-2ev_100p.png) | ![150p](images/ISO_2500_S_2_REFERENCE_05ev_05ev_05ev_05ev_-2ev_150p.png) |
+
+| Variant | PSNR vs reference | SSIM vs reference |
+|---------|-------------------|-------------------|
+| 6 pts | 32.1 dB | 0.982 |
+| 10 pts | 41.2 dB | 0.988 |
+| 20 pts | 44.1 dB | 0.989 |
+| 30 pts | 40.5 dB | 0.989 |
+| 50 pts | 44.1 dB | 0.989 |
+| 100 pts | 44.0 dB | 0.987 |
+| 150 pts | 43.9 dB | 0.987 |
