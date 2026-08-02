@@ -1831,6 +1831,34 @@ for (const p of PROFILES) {
 
 sel.value = 'Panasonic V-Log';
 
+const fieldKey = id => 'ffmpeg-log-field-' + id;
+const saveField = id => {
+    if (!storeOK) return;
+    try {
+        const el = document.getElementById(id);
+        window.localStorage.setItem(fieldKey(id), el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
+    } catch (e) { storeOK = false; }
+};
+const FIELDS = ['profile', 'ev', 'pointsN', 'inputFile', 'outputFile', 'hiPrecision', 'extraFilters', 'extraOpts'];
+const loadFields = () => {
+    if (!storeOK) return;
+    try {
+        for (const id of FIELDS) {
+            const saved = window.localStorage.getItem(fieldKey(id));
+            if (saved === null) continue;
+            const el = document.getElementById(id);
+            if (el.type === 'checkbox') el.checked = saved !== '0';
+            else el.value = saved;
+        }
+    } catch (e) { storeOK = false; }
+};
+loadFields();
+for (const id of FIELDS) {
+    const el = document.getElementById(id);
+    const eventType = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
+    el.addEventListener(eventType, () => saveField(id));
+}
+
 function setLang(next) {
     if (!I18N[next]) next = 'en';
     lang = next;
@@ -1848,9 +1876,11 @@ setLang(lang);
 
 evDec.addEventListener('click', () => {
     evInput.value = Math.max(-10, parseFloat(evInput.value) - 0.5).toFixed(1);
+    saveField('ev');
 });
 evInc.addEventListener('click', () => {
     evInput.value = Math.min(10, parseFloat(evInput.value) + 0.5).toFixed(1);
+    saveField('ev');
 });
 
 // ============================================================
